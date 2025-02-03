@@ -1,5 +1,6 @@
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 class TaxCalculator:
     @staticmethod
@@ -130,24 +131,26 @@ def calculate_compound_capital_growth(annual_capital_increase_capital: float, in
 
     return total_capital
 
-def calculate_number_of_years(interest_rate_annual: float, annual_income: float, annual_income_cap: float) -> float: 
+
+def calculate_number_of_years(interest_rate_annual: float, interest_rate_low_risk: float, annual_income: float, annual_income_cap: float) -> float: 
     """
-    Calculate the number of years to reach a certain capital growth with a given interest rate.
+    Calculate the number of years to reach a sufficient capital to maintain annual net income from capital income.
 
     params:
-        interest_rate: float, annual interest rate in percent
-        income: float, annual income in EUR
+        interest_rate_annual: float, annual interest rate for the capital growth phase (e.g. 20% would be 0.2)
+        interest_rate_low_risk: float, annual interest rate for the time when the capital serves as passive income
+        annual_income: float, annual income in EUR
+        annual_income_cap: float, annual income in EUR that would represent "the maximum income needed" even if the current annual income is higher.
     """
+
     years = 0
     total_capital = 0
-
-  
 
     income_tax = TaxCalculator.calculate_german_income_tax(annual_income)
     social_security_tax = TaxCalculator.calculate_german_social_security_tax(annual_income)
     annual_income_net = annual_income - income_tax - social_security_tax
 
-    total_required_capital = annual_income_net / interest_rate_annual
+    total_required_capital = annual_income_net / interest_rate_low_risk
 
     if annual_income > annual_income_cap:
         income_tax_cap = TaxCalculator.calculate_german_income_tax(annual_income_cap)
@@ -162,14 +165,53 @@ def calculate_number_of_years(interest_rate_annual: float, annual_income: float,
         total_capital = total_capital * (1 + interest_rate_annual) + income_tax
         years += 1
 
+        if years > 50:
+            break
+
     return years, total_required_capital
+
+def create_plot_for_income_and_interest_rate():
+    """
+        Create a plot to show the number of years to reach a sufficient capital for different annual incomes and interest rates.
+    """
+
+    interest_rate_low_risk = 0.05
+    
+    interest_rates = np.linspace(0.05, 0.2, 4)
+    annual_incomes = np.array([20e3,50e3,80e3,100e3,150e3,200e3,300e3])
+    years_to_reach_capital = []
+
+    print("I hang here")
+    
+    for interest_rate in interest_rates:
+        for annual_income in annual_incomes:
+            years, _ = calculate_number_of_years(interest_rate, interest_rate_low_risk, annual_income, 150e3)
+            years_to_reach_capital.append(years)
+
+
+        plt.plot(annual_incomes, np.array(years_to_reach_capital).copy(), marker="o")
+        years_to_reach_capital = []
+
+    plt.legend([f"Interest Rate: {interest_rate*100:.1f} %" for interest_rate in interest_rates])
+    plt.xlabel("Annual Income in EUR")
+    plt.ylabel("Years to reach sufficient capital")
+    plt.grid()
+    plt.show()
 
 
 if __name__ == "__main__":
-    interest_rate = 0.1
-    annual_income = 200e3
-    annual_income_cap = 300e3
+    income = 150e3
+    net_income = income - TaxCalculator.calculate_german_income_tax(income) - TaxCalculator.calculate_german_social_security_tax(income)
+    print(net_income/12)
+    
+    
+    #interest_rate = 0.15
+    #interest_rate_low_risk = 0.05
+    #annual_income = 100e3
+    #annual_income_cap = 300e3
 
-    years, total_required_capital = calculate_number_of_years(interest_rate, annual_income, annual_income_cap)
-    print(f"Years to reach capital growth: {years}")    
-    print(total_required_capital)
+    #years, total_required_capital = calculate_number_of_years(interest_rate, interest_rate_low_risk, annual_income, annual_income_cap)
+    #print(f"Years to reach capital growth: {years}")    
+    #print(total_required_capital)
+
+    #create_plot_for_income_and_interest_rate()
