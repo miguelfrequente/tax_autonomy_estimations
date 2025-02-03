@@ -1,59 +1,74 @@
 
-
+import numpy as np
 
 annual_income = 100000
 monthly_income = annual_income / 12
 
-# This is a function that calculates the income tax for a given income according to the german tax system using internal variables for the tax brackets and rates.
+class TaxCalculator:
+    @staticmethod
+    def calculate_german_income_tax(income: float) -> float:
+        """
+        German income tax calculation for 2025 using the official tax formula according to
 
-def calculate_german_income_tax_final(income):
-    """
-    Fully corrected German income tax calculation for 2024 using the official tax formula.
-    """
+        https://de.wikipedia.org/wiki/Einkommensteuer_(Deutschland)#
 
-    # **Tax Brackets for 2024**
-    E0 = 11605   # Tax-free allowance
-    E1 = 17006
-    E2 = 66761
-    E3 = 277826
+        Validity checked according to the 2022 curve with the 2022 values for E0, E1, E2 and E3.
 
-    # **Progression Zone Coefficients (official values)**
-    a1, b1 = 0.14, 998*10e-8
-    a2, b2 = 0.2397, 0.00022874
+        params:
+            income: float, annual income in EUR    
+        """
 
-    # **Proportional Tax Offsets (corrected)**
-    c3, d3 = 0.42, 9136.63
-    c4, d4 = 0.45, 17374.99
+        # **Tax Brackets for 2025**
+        E0 = 12097 # 10348 for 2022
+        E1 = 17444 # 14927 for 2022
+        E2 = 68481 # 58497 for 2022
+        E3 = 277286 # 277826 for 2022
 
-    # **Tax Calculation**
-    if income <= E0:
-        return 0  # No tax in the first zone
+        # **Progression Zone Coefficients (official values)**
+        sg1, p1 = 0.14, 998*1e-8
+        sg2, p2 = 0.2397, 181.19*1e-8
 
-    elif E0 < income <= E1:
-        # First progression zone (quadratic tax growth)
-        return round(a1 * (income - E0) + b1 * ((income - E0) ** 2), 2)
+        # **Proportional Tax Offsets (corrected)**
+        sg3, C3 = 0.42, -10911
+        sg4, C4 = 0.45, -19256.67
 
-    elif E1 < income <= E2:
-        # Compute tax at E1 (S1)
-        S1 = a1 * (E1 - E0) + b1 * ((E1 - E0) ** 2)
-        # Second progression zone
-        return round(S1 + a2 * (income - E1) + b2 * ((income - E1) ** 2), 2)
+        # **Tax Calculation**
+        if income <= E0:
+            return 0  # No tax in the first zone
 
-    elif E2 < income <= E3:
-        # First proportional tax zone (linear tax with offset)
-        return round(c3 * income - d3, 2)
+        elif E0 < income <= E1:
+            # First progression zone (quadratic tax growth)
+            return round(sg1 * (income - E0) + np.pow(income - E0,2)*p1, 2)
 
-    else:  # income > E3
-        # Highest proportional tax zone (linear tax with offset)
-        return round(c4 * income - d4, 2)
+        elif E1 < income <= E2:
+            # Compute tax at E1 (S1)
+            S1 = sg1 * (E1 - E0) + np.pow(E1 - E0,2)*p1
+            # Second progression zone
+            return round(sg2 * (income - E1) + np.pow(income - E1,2)*p2 + S1, 2)
 
-# **Test Cases (Final)**
-test_incomes_final = [10000, 20000, 50000, 100000, 300000]
-test_results_final = {income: calculate_german_income_tax_final(income) for income in test_incomes_final}
-#print(test_results_final)
+        elif E2 < income <= E3:
+            # First proportional tax zone (linear tax with offset)
+            return round(sg3*income - np.abs(C3), 2)
 
+        else:  # income > E3
+            # Highest proportional tax zone (linear tax with offset)
+            return round(sg4 * income - np.abs(C4), 2)
+
+    @staticmethod
+    def print_results(income:float) -> None:
+        tax = TaxCalculator.calculate_german_income_tax(income)
+        average_tax = tax / income
+        print(f"Monthly income: {income} €. Absolute Tax to pay: {tax} €. Average tax rate: {average_tax*100:.2f}%")
+
+    @staticmethod
+    def validate_output() -> None:
+        TaxCalculator.print_results(10e3) # For 2022 expected average tax rate: 0 %
+        TaxCalculator.print_results(20e3) # For 2022 expected average tax rate: 11 %
+        TaxCalculator.print_results(50e3) # For 2022 expected average tax rate: 23 %
+        TaxCalculator.print_results(80e3) # For 2022 expected average tax rate: 28 %
+        TaxCalculator.print_results(100e3) # For 2022 expected average tax rate: 32 %
+        TaxCalculator.print_results(200e3) # For 2022 expected average tax rate: 37 %
 
 
 if __name__ == "__main__":
-    print(calculate_german_income_tax_final(50000))
-    print(calculate_german_income_tax_final(100000))
+    TaxCalculator.validate_output()
