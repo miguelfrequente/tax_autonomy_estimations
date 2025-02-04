@@ -1,6 +1,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
 
 class TaxCalculator:
     @staticmethod
@@ -170,40 +171,48 @@ def calculate_number_of_years(interest_rate_annual: float, interest_rate_low_ris
 
     return years, total_required_capital
 
-def create_plot_for_income_and_interest_rate():
+def create_plot_for_income_and_interest_rate(annual_income_cap: float = 500e3) -> None:
     """
         Create a plot to show the number of years to reach a sufficient capital for different annual incomes and interest rates.
     """
 
     interest_rate_low_risk = 0.05
     
-    interest_rates = np.linspace(0.05, 0.2, 4)
+    interest_rates = np.array([0.03, 0.07, 0.14, 0.2])
     annual_incomes = np.array([20e3,50e3,80e3,100e3,150e3,200e3,300e3])
+    #annual_income_cap = 100e3
     years_to_reach_capital = []
 
     print("I hang here")
     
     for interest_rate in interest_rates:
         for annual_income in annual_incomes:
-            years, _ = calculate_number_of_years(interest_rate, interest_rate_low_risk, annual_income, 150e3)
+            years, _ = calculate_number_of_years(interest_rate, interest_rate_low_risk, annual_income, annual_income_cap)
             years_to_reach_capital.append(years)
 
 
         plt.plot(annual_incomes, np.array(years_to_reach_capital).copy(), marker="o")
         years_to_reach_capital = []
 
-    plt.legend([f"Interest Rate: {interest_rate*100:.1f} %" for interest_rate in interest_rates])
+    plt.legend([f"Annual return rate: {interest_rate*100:.1f} %" for interest_rate in interest_rates])
+    
     plt.xlabel("Annual Income in EUR")
+    plt.gca().get_xaxis().set_major_formatter(plt.FuncFormatter(lambda x, loc: "{:,}".format(int(x))))
     plt.ylabel("Years to reach sufficient capital")
+    
     plt.grid()
-    plt.show()
+    
+    # save the plot in the current directory
+    plt.savefig("growthtime_estimations_nocap.png")
 
+    plt.show()
 
 if __name__ == "__main__":
     income = 150e3
     net_income = income - TaxCalculator.calculate_german_income_tax(income) - TaxCalculator.calculate_german_social_security_tax(income)
     print(net_income/12)
     
+    #sys.exit()
     
     #interest_rate = 0.15
     #interest_rate_low_risk = 0.05
@@ -214,4 +223,6 @@ if __name__ == "__main__":
     #print(f"Years to reach capital growth: {years}")    
     #print(total_required_capital)
 
-    #create_plot_for_income_and_interest_rate()
+
+    annual_income_cap = 500e3
+    create_plot_for_income_and_interest_rate(annual_income_cap)
