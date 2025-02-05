@@ -4,6 +4,20 @@ import matplotlib.pyplot as plt
 import sys
 
 class TaxCalculator:
+    # **Tax Brackets for 2025**
+    E0 = 12097 # 10348 for 2022
+    E1 = 17444 # 14927 for 2022
+    E2 = 68481 # 58497 for 2022
+    E3 = 277286 # 277826 for 2022
+
+    # **Progression Zone Coefficients (official values)**
+    sg1, p1 = 0.14, 998*1e-8
+    sg2, p2 = 0.2397, 181.19*1e-8
+
+    # **Proportional Tax Offsets (corrected)**
+    sg3, C3 = 0.42, -10911
+    sg4, C4 = 0.45, -19256.67
+
     @staticmethod
     def calculate_german_income_tax(income: float) -> float:
         """
@@ -18,18 +32,18 @@ class TaxCalculator:
         """
 
         # **Tax Brackets for 2025**
-        E0 = 12097 # 10348 for 2022
-        E1 = 17444 # 14927 for 2022
-        E2 = 68481 # 58497 for 2022
-        E3 = 277286 # 277826 for 2022
+        E0 = TaxCalculator.E0
+        E1 = TaxCalculator.E1
+        E2 = TaxCalculator.E2
+        E3 = TaxCalculator.E3
 
         # **Progression Zone Coefficients (official values)**
-        sg1, p1 = 0.14, 998*1e-8
-        sg2, p2 = 0.2397, 181.19*1e-8
+        sg1, p1 = TaxCalculator.sg1, TaxCalculator.p1
+        sg2, p2 = TaxCalculator.sg2, TaxCalculator.p2
 
         # **Proportional Tax Offsets (corrected)**
-        sg3, C3 = 0.42, -10911
-        sg4, C4 = 0.45, -19256.67
+        sg3, C3 = TaxCalculator.sg3, TaxCalculator.C3
+        sg4, C4 = TaxCalculator.sg4, TaxCalculator.C4
 
         # **Tax Calculation**
         if income <= E0:
@@ -133,7 +147,7 @@ def calculate_compound_capital_growth(annual_capital_increase_capital: float, in
     return total_capital
 
 
-def calculate_number_of_years(interest_rate_annual: float, interest_rate_low_risk: float, annual_income: float, annual_income_cap: float) -> float: 
+def calculate_number_of_years(interest_rate_annual: float, interest_rate_low_risk: float, annual_income: float, annual_income_cap: float, income_support: float = 0.f) -> float: 
     """
     Calculate the number of years to reach a sufficient capital to maintain annual net income from capital income.
 
@@ -161,9 +175,8 @@ def calculate_number_of_years(interest_rate_annual: float, interest_rate_low_ris
 
         total_required_capital = annual_income_net / interest_rate_annual
 
-
     while total_capital < total_required_capital:
-        total_capital = total_capital * (1 + interest_rate_annual) + income_tax
+        total_capital = total_capital * (1 + interest_rate_annual) + income_tax + income_support
         years += 1
 
         if years > 50:
@@ -171,9 +184,13 @@ def calculate_number_of_years(interest_rate_annual: float, interest_rate_low_ris
 
     return years, total_required_capital
 
+
 def create_plot_for_income_and_interest_rate(annual_income_cap: float = 500e3) -> None:
     """
         Create a plot to show the number of years to reach a sufficient capital for different annual incomes and interest rates.
+
+        params:
+            annual_income_cap: float, annual income in EUR that would represent "the maximum income needed" even if the current annual income is higher.
     """
 
     interest_rate_low_risk = 0.05
@@ -182,12 +199,13 @@ def create_plot_for_income_and_interest_rate(annual_income_cap: float = 500e3) -
     annual_incomes = np.array([20e3,50e3,80e3,100e3,150e3,200e3,300e3])
     #annual_income_cap = 100e3
     years_to_reach_capital = []
+    income_support = 0
 
     print("I hang here")
     
     for interest_rate in interest_rates:
         for annual_income in annual_incomes:
-            years, _ = calculate_number_of_years(interest_rate, interest_rate_low_risk, annual_income, annual_income_cap)
+            years, _ = calculate_number_of_years(interest_rate, interest_rate_low_risk, annual_income, annual_income_cap, income_support)
             years_to_reach_capital.append(years)
 
 
@@ -203,11 +221,51 @@ def create_plot_for_income_and_interest_rate(annual_income_cap: float = 500e3) -
     plt.grid()
     
     # save the plot in the current directory
-    plt.savefig("growthtime_estimations_nocap.png")
+    if annual_income_cap > 300e3:
+        plt.savefig("growthtime_estimations_nocap.png")
+    else:
+        plt.savefig("growthtime_estimations_cap_" + str(int(annual_income_cap/1e3)) + "k.png")
+    #plt.savefig("growthtime_estimations_nocap.png")
 
     plt.show()
 
+
+def create_plot_with_annual_cap_and_redistribution():
+
+    income_distribution = [[10e3,0.1], [20e3,0.1], [30e3,0.1], [40e3,0.1], [50e3,0.1], [60e3,0.1], [70e3,0.1], [80e3,0.1], [90e3,0.1], [100e3,0.1]]
+
+    annual_income_cap = 50e3
+
+    accumulated_income_tax_under_cap = 0
+    accumulated_income_tax_over_cap = 0
+
+    for annual_income, percentage in income_distribution:
+        if annual_income <= annual_income_cap:
+            income_tax = TaxCalculator.calculate_german_income_tax(annual_income)
+            income_tax_at_cap = TaxCalculator.calculate_german_income_tax(annual_income_cap)
+
+            income_tax_deviation_from_cap = income_tax_at_cap - income_tax
+            #income_tax_deviation_from_cap = annual_income * TaxCalculator.sg4 - income_tax
+            accumulated_income_tax_under_cap += income_tax_deviation_from_cap * percentage
+
+        if annual_income > annual_income_cap:
+            income_tax = TaxCalculator.calculate_german_income_tax(annual_income)
+            income_tax_at_cap = TaxCalculator.calculate_german_income_tax(annual_income_cap)
+
+            income_tax_deviation_from_cap = income_tax - income_tax_at_cap
+            accumulated_income_tax_over_cap += income_tax_deviation_from_cap * percentage
+
+    print(f"Accumulated income tax deviation under cap: {accumulated_income_tax_under_cap}")
+    print(f"Accumulated income tax deviation over cap: {accumulated_income_tax_over_cap}")
+
+
+
+
 if __name__ == "__main__":
+
+    create_plot_with_annual_cap_and_redistribution()
+    sys.exit()
+    
     income = 150e3
     net_income = income - TaxCalculator.calculate_german_income_tax(income) - TaxCalculator.calculate_german_social_security_tax(income)
     print(net_income/12)
@@ -224,5 +282,5 @@ if __name__ == "__main__":
     #print(total_required_capital)
 
 
-    annual_income_cap = 500e3
+    annual_income_cap = 100e3
     create_plot_for_income_and_interest_rate(annual_income_cap)
