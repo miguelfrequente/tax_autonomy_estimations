@@ -210,6 +210,12 @@ def create_plot_for_income_and_interest_rate(annual_income_cap: float = 500e3, s
     years_to_reach_capital = []
     income_support_per_income_bracket,_ = calculate_income_support(income_distribution, annual_income_cap)
 
+    print(annual_income_cap)
+    print(income_distribution)
+    print(income_support_per_income_bracket)
+
+    sys.exit()
+
     print("I hang here")
     
     
@@ -245,8 +251,7 @@ def create_plot_for_income_and_interest_rate(annual_income_cap: float = 500e3, s
 def calculate_income_support(income_distribution: list, annual_income_cap: float) -> float:
 
     #income_distribution = [[10e3,0.1], [20e3,0.1], [30e3,0.1], [40e3,0.1], [50e3,0.1], [60e3,0.1], [70e3,0.1], [80e3,0.1], [90e3,0.1], [100e3,0.1]]
-    support_per_income_bracket = []
-
+    support_per_income_bracket = np.zeros((len(income_distribution)))
     annual_income_cap = 50e3
 
     accumulated_income_tax_under_cap = 0
@@ -255,7 +260,8 @@ def calculate_income_support(income_distribution: list, annual_income_cap: float
 
     # Support according to income cap
 
-    for annual_income, percentage in income_distribution:
+    for i in range(len(income_distribution)):
+        annual_income, percentage = income_distribution[i]
         if annual_income <= annual_income_cap:
             income_tax = TaxCalculator.calculate_german_income_tax(annual_income)
             income_tax_at_cap = TaxCalculator.calculate_german_income_tax(annual_income_cap)
@@ -268,13 +274,20 @@ def calculate_income_support(income_distribution: list, annual_income_cap: float
             income_tax = TaxCalculator.calculate_german_income_tax(annual_income)
             income_tax_at_cap = TaxCalculator.calculate_german_income_tax(annual_income_cap)
 
-            income_tax_deviation_from_cap = income_tax - income_tax_at_cap
+            income_tax_deviation_from_cap = income_tax_at_cap - income_tax
             accumulated_income_tax_over_cap += income_tax_deviation_from_cap * percentage
 
-    accumulated_support_difference = accumulated_income_tax_under_cap - accumulated_income_tax_over_cap
+            support_per_income_bracket[i] = income_tax_deviation_from_cap
+
+
+    accumulated_support_difference = accumulated_income_tax_under_cap - np.abs(accumulated_income_tax_over_cap)
     
-    for _, percentage in income_distribution:
-        support_per_income_bracket.append(accumulated_income_tax_over_cap * percentage)
+    for i in range(len(income_distribution)):
+        annual_income, percentage = income_distribution[i]
+        if annual_income <= annual_income_cap:
+            support_per_income_bracket[i] = np.abs(accumulated_income_tax_over_cap) * percentage
+
+
 
     return support_per_income_bracket, accumulated_support_difference
     
