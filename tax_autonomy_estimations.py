@@ -177,7 +177,6 @@ def calculate_number_of_years(interest_rate_annual: float, interest_rate_low_ris
         #total_required_capital_cap = annual_income_net / interest_rate_low_risk
         total_required_capital = annual_income_net / interest_rate_low_risk
 
-    #income_support = 0
 
     '''
     print("")
