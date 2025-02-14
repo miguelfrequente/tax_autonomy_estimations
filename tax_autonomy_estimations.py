@@ -3,6 +3,46 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 
+
+class IncomeDistribution:
+    income_distribution_germany_monthly_2025 =  [
+                    [254, 0.018142335],
+                    [507, 0.0368473],
+                    [745, 0.05746718],
+                    [999, 0.074790248],
+                    [1253, 0.086605468],
+                    [1498, 0.094857368],
+                    [1752, 0.09815418],
+                    [1998, 0.095133748],
+                    [2251, 0.083585036],
+                    [2497, 0.06955878],
+                    [2751, 0.055818774],
+                    [2997, 0.043717303],
+                    [3250, 0.033264238],
+                    [3496, 0.025298588],
+                    [3750, 0.019800612],
+                    [4003, 0.015951041],
+                    [4249, 0.012920738],
+                    [4503, 0.009623927],
+                    [4749, 0.007146382],
+                    [5002, 0.005497977],
+                    [5248, 0.004402329],
+                    [5502, 0.003849571],
+                    [5755, 0.00412595],
+                    [6001, 0.005497977],
+                    [6247, 0.006327115],
+                    [6501, 0.007422762],
+                    [6754, 0.007699141],
+                    [7000, 0.0165038],]
+    
+    def check_sum_probability():
+        total_probability = sum([x[1] for x in IncomeDistribution.income_distribution_germany_monthly_2025])
+        print(total_probability)
+        assert round(total_probability,1)==1.0, "Income distribution does not sum up to 1, it is {:.3f}".format(total_probability)
+
+    def transform_distrubtion_to_annual_income():
+        pass
+
 class TaxCalculator:
     # **Tax Brackets for 2025**
     E0 = 12097 # 10348 for 2022
@@ -352,6 +392,9 @@ def calculate_income_support(income_distribution: list, annual_income_cap: float
 
 
 if __name__ == "__main__":
+    print(IncomeDistribution.income_distribution_germany_monthly_2025)
+    IncomeDistribution.check_sum_probability()
+    
     #income = 30e3
     #income_net = income - TaxCalculator.calculate_german_income_tax(income) - TaxCalculator.calculate_german_social_security_tax(income)
     #print(income_net/12*0.15)
@@ -359,10 +402,10 @@ if __name__ == "__main__":
 
     #sys.exit()
     
-    annual_income_cap = 150e3
+    #annual_income_cap = 150e3
 
-    create_plot_for_income_and_interest_rate(annual_income_cap=annual_income_cap, save_plot_to_disk=False)
-    sys.exit()
+    #create_plot_for_income_and_interest_rate(annual_income_cap=annual_income_cap, save_plot_to_disk=False)
+    #sys.exit()
     
     #income = 100e3
     #net_income = income - TaxCalculator.calculate_german_income_tax(income) - TaxCalculator.calculate_german_social_security_tax(income)
