@@ -166,21 +166,42 @@ def calculate_number_of_years(interest_rate_annual: float, interest_rate_low_ris
     annual_income_net = annual_income - income_tax - social_security_tax
 
     total_required_capital = annual_income_net / interest_rate_low_risk
+    #total_required_capital_cap = 0
 
-    if annual_income > annual_income_cap:
+    if annual_income >= annual_income_cap:
         income_tax_cap = TaxCalculator.calculate_german_income_tax(annual_income_cap)
         social_security_tax_cap = TaxCalculator.calculate_german_social_security_tax(annual_income_cap)
 
         annual_income_net = annual_income_cap - income_tax_cap - social_security_tax_cap
 
-        total_required_capital = annual_income_net / interest_rate_annual
+        #total_required_capital_cap = annual_income_net / interest_rate_low_risk
+        total_required_capital = annual_income_net / interest_rate_low_risk
+
+    #income_support = 0
+
+    '''
+    print("")
+    print("from calc number of years")
+    print(annual_income)
+    print(total_required_capital)
+    print("income support:" + str(income_support))
+    print("income support + income tax : " + str(income_tax + income_support))
+
+    print("total required capital: " + str(total_required_capital))
+    print("total required capital at cap:" + str(total_required_capital_cap))
+
+    if annual_income >= annual_income_cap:
+        total_required_capital = total_required_capital_cap
+    '''
 
     while total_capital < total_required_capital:
         total_capital = total_capital * (1 + interest_rate_annual) + income_tax + income_support
         years += 1
 
-        if years > 50:
+        if years > 100:
             break
+
+    #print("years: " + str(years))
 
     return years, total_required_capital
 
@@ -208,28 +229,50 @@ def create_plot_for_income_and_interest_rate(annual_income_cap: float = 500e3, s
     
     #annual_income_cap = 100e3
     years_to_reach_capital = []
+    years_to_reach_capital_no_support = []
     income_support_per_income_bracket,_ = calculate_income_support(income_distribution, annual_income_cap)
 
     print(annual_income_cap)
     print(income_distribution)
     print(income_support_per_income_bracket)
 
-    sys.exit()
+    #sys.exit()
 
-    print("I hang here")
+    #print("I hang here")
     
     
     for interest_rate in interest_rates:
+        print("")
+        print("interest rate: " + str(interest_rate))
+        print("")
         for annual_income, income_support in zip(annual_incomes, income_support_per_income_bracket):
 
             years, _ = calculate_number_of_years(interest_rate, interest_rate_low_risk, annual_income, annual_income_cap, income_support)
             years_to_reach_capital.append(years)
 
+            years_no_support, _ = calculate_number_of_years(interest_rate, interest_rate_low_risk, annual_income, annual_income_cap, 0)
+            years_to_reach_capital_no_support.append(years_no_support)
 
-        plt.plot(annual_incomes, np.array(years_to_reach_capital).copy(), marker="o")
+            print("annual income : " + str(annual_income) + " year reduction with support: " + str(years_no_support-years))
+
+        plt.plot(annual_incomes, np.array(years_to_reach_capital_no_support).copy(), marker="o")
+        plt.plot(annual_incomes, np.array(years_to_reach_capital).copy(), marker="x")
+
+        
         years_to_reach_capital = []
+        years_to_reach_capital_no_support = []
 
-    plt.legend([f"Annual return rate: {interest_rate*100:.1f} %" for interest_rate in interest_rates])
+        #plt.show()
+        #break
+        
+    legend = []
+
+    for interest_rate in interest_rates:
+        legend.append(interest_rate)
+        legend.append(interest_rate)
+
+
+    plt.legend([f"Annual return rate: {interest_rate*100:.1f} %" for interest_rate in legend])
     
     plt.xlabel("Annual Income in EUR")
     plt.gca().get_xaxis().set_major_formatter(plt.FuncFormatter(lambda x, loc: "{:,}".format(int(x))))
@@ -252,7 +295,7 @@ def calculate_income_support(income_distribution: list, annual_income_cap: float
 
     #income_distribution = [[10e3,0.1], [20e3,0.1], [30e3,0.1], [40e3,0.1], [50e3,0.1], [60e3,0.1], [70e3,0.1], [80e3,0.1], [90e3,0.1], [100e3,0.1]]
     support_per_income_bracket = np.zeros((len(income_distribution)))
-    annual_income_cap = 50e3
+    #annual_income_cap = 50e3
 
     accumulated_income_tax_under_cap = 0
     accumulated_income_tax_over_cap = 0
@@ -271,14 +314,23 @@ def calculate_income_support(income_distribution: list, annual_income_cap: float
             accumulated_income_tax_under_cap += income_tax_deviation_from_cap * percentage
 
         if annual_income > annual_income_cap:
+
+            
             income_tax = TaxCalculator.calculate_german_income_tax(annual_income)
             income_tax_at_cap = TaxCalculator.calculate_german_income_tax(annual_income_cap)
+
+            print(f"annual income: {annual_income}")
+            print(f"income tax: {income_tax}")
+            print("income tax at cap:" + str(income_tax_at_cap))
 
             income_tax_deviation_from_cap = income_tax_at_cap - income_tax
             accumulated_income_tax_over_cap += income_tax_deviation_from_cap * percentage
 
             support_per_income_bracket[i] = income_tax_deviation_from_cap
 
+            print("support per income bracked: " +str(support_per_income_bracket[i]))
+
+    #sys.exit()
 
     accumulated_support_difference = accumulated_income_tax_under_cap - np.abs(accumulated_income_tax_over_cap)
     
@@ -301,13 +353,21 @@ def calculate_income_support(income_distribution: list, annual_income_cap: float
 
 
 if __name__ == "__main__":
+    #income = 30e3
+    #income_net = income - TaxCalculator.calculate_german_income_tax(income) - TaxCalculator.calculate_german_social_security_tax(income)
+    #print(income_net/12*0.15)
+    #print(income_net/12)
 
-    create_plot_for_income_and_interest_rate(annual_income_cap=100e3, save_plot_to_disk=False)
+    #sys.exit()
+    
+    annual_income_cap = 150e3
+
+    create_plot_for_income_and_interest_rate(annual_income_cap=annual_income_cap, save_plot_to_disk=False)
     sys.exit()
     
-    income = 150e3
-    net_income = income - TaxCalculator.calculate_german_income_tax(income) - TaxCalculator.calculate_german_social_security_tax(income)
-    print(net_income/12)
+    #income = 100e3
+    #net_income = income - TaxCalculator.calculate_german_income_tax(income) - TaxCalculator.calculate_german_social_security_tax(income)
+    #print(net_income/12)
     
     #sys.exit()
     
@@ -320,6 +380,3 @@ if __name__ == "__main__":
     #print(f"Years to reach capital growth: {years}")    
     #print(total_required_capital)
 
-
-    annual_income_cap = 100e3
-    create_plot_for_income_and_interest_rate(annual_income_cap)
