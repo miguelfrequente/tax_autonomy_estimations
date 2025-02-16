@@ -5,7 +5,7 @@ import sys
 
 
 class IncomeDistribution:
-    income_distribution_germany_monthly_2025 =  [
+    income_distribution_germany_monthly_net_2025 =  [
                     [254, 0.018142335],
                     [507, 0.0368473],
                     [745, 0.05746718],
@@ -36,12 +36,45 @@ class IncomeDistribution:
                     [7000, 0.0165038],]
     
     def check_sum_probability():
-        total_probability = sum([x[1] for x in IncomeDistribution.income_distribution_germany_monthly_2025])
+        total_probability = sum([x[1] for x in IncomeDistribution.income_distribution_germany_monthly_net_2025])
         print(total_probability)
         assert round(total_probability,1)==1.0, "Income distribution does not sum up to 1, it is {:.3f}".format(total_probability)
 
     def transform_distrubtion_to_annual_income():
-        pass
+        income_distribution_germany_annual_pretax_2025 = []
+
+        for income_monthly_net,percentage in IncomeDistribution.income_distribution_germany_monthly_net_2025:
+            print(f"Now processing income: {income_monthly_net}")
+
+            income_annual_net = income_monthly_net * 12
+
+            income_annual_delta = 0
+            income_annual_pretax_estimation = 0
+            epsilon_threshold = 0.01
+            epsilon = 1
+            multiplicator = 2
+
+            while np.abs(epsilon) > epsilon_threshold:
+                income_annual_pretax_estimation = income_annual_net*multiplicator
+
+                income_annual_posttax_estimation = income_annual_pretax_estimation - TaxCalculator.calculate_german_income_tax(income_annual_pretax_estimation) - TaxCalculator.calculate_german_social_security_tax(income_annual_pretax_estimation)
+
+                income_annual_delta = income_annual_posttax_estimation-income_annual_net
+
+                
+                if income_annual_delta > 0:
+                    multiplicator = multiplicator - multiplicator/2
+                elif income_annual_delta < 0:
+                    multiplicator = multiplicator + multiplicator/2
+
+                epsilon = income_annual_delta / income_annual_net
+    
+            print("Income net in EUR : " + str(income_annual_net) + " Income pre tax in EUR: " + str(int(income_annual_pretax_estimation)))
+            print("Monthly Income post tax in EUR: " + str(int(TaxCalculator.calculcate_post_tax_income(income_annual_pretax_estimation)/12)))
+
+            income_distribution_germany_annual_pretax_2025.append([income_annual_pretax_estimation,percentage])
+
+        return income_distribution_germany_annual_pretax_2025
 
 class TaxCalculator:
     # **Tax Brackets for 2025**
@@ -162,6 +195,8 @@ class TaxCalculator:
         TaxCalculator.print_results_social_security_tax(80e3) # For 2022 expected average tax rate: < 19.7 %
         TaxCalculator.print_results_social_security_tax(100e3) # For 2022 expected average tax rate: < 19.7 %
 
+    def calculcate_post_tax_income(income: float) -> float:
+        return income - TaxCalculator.calculate_german_income_tax(income) - TaxCalculator.calculate_german_social_security_tax(income)
 
 
 
@@ -392,9 +427,10 @@ def calculate_income_support(income_distribution: list, annual_income_cap: float
 
 
 if __name__ == "__main__":
-    print(IncomeDistribution.income_distribution_germany_monthly_2025)
+    print(IncomeDistribution.income_distribution_germany_monthly_net_2025)
     IncomeDistribution.check_sum_probability()
     
+    print(IncomeDistribution.transform_distrubtion_to_annual_income())
     #income = 30e3
     #income_net = income - TaxCalculator.calculate_german_income_tax(income) - TaxCalculator.calculate_german_social_security_tax(income)
     #print(income_net/12*0.15)
