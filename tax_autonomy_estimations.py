@@ -35,10 +35,49 @@ class IncomeDistribution:
                     [6754, 0.007699141],
                     [7000, 0.0165038],]
     
-    def check_sum_probability():
-        total_probability = sum([x[1] for x in IncomeDistribution.income_distribution_germany_monthly_net_2025])
+    income_distribution_germany_annual_pretax_2025 = [[3048.0, 0.018142335], 
+                                                      [6084.0, 0.0368473], 
+                                                      [8940.0, 0.05746718], 
+                                                      [11988.0, 0.074790248],
+                                                      [21408.6796875, 0.086605468],
+                                                      [26297.890020525545, 0.094857368],
+                                                      [32402.37806481606, 0.09815418],
+                                                      [38404.916015625, 0.095133748],
+                                                      [44456.68841170119, 0.083585036],
+                                                      [51254.11145067215, 0.06955878],
+                                                      [58019.106321155494, 0.055818774],
+                                                      [65692.49251496955, 0.043717303],
+                                                      [71238.10499621322, 0.033264238],
+                                                      [76630.28155900352, 0.025298588],
+                                                      [82197.8134571691, 0.019800612],
+                                                      [86562.43176269531, 0.015951041],
+                                                      [91882.03161621094, 0.012920738],
+                                                      [97374.62658691406, 0.009623927],
+                                                      [102694.22644042969, 0.007146382],
+                                                      [108165.19702148438, 0.005497977],
+                                                      [113484.796875, 0.004402329],
+                                                      [118977.39184570312, 0.003849571],
+                                                      [124448.36242675781, 0.00412595],
+                                                      [129767.96228027344, 0.005497977],
+                                                      [133547.9080920462, 0.006327115],
+                                                      [138977.90147373016, 0.007422762],
+                                                      [144386.51692871458, 0.007699141],
+                                                      [149645.4868968022, 0.0165038]]
+    
+    def check_sum_probability(distribution: list) -> None:
+        total_probability = sum([x[1] for x in distribution])
         print(total_probability)
         assert round(total_probability,1)==1.0, "Income distribution does not sum up to 1, it is {:.3f}".format(total_probability)
+
+    def cutoff_income_distribution(income_distribution: list, cutoff: float) -> list:
+        """
+        Cut the income distribution at a certain cutoff value.
+
+        params:
+            income_distribution: list, list of income values and their probabilities
+            cutoff: float, cutoff value in EUR
+        """
+        return [[income, percentage] for income, percentage in income_distribution if income >= cutoff]
 
     def transform_distrubtion_to_annual_income():
         income_distribution_germany_annual_pretax_2025 = []
@@ -75,6 +114,28 @@ class IncomeDistribution:
             income_distribution_germany_annual_pretax_2025.append([income_annual_pretax_estimation,percentage])
 
         return income_distribution_germany_annual_pretax_2025
+    
+    def plot_income_distribution_as_bar_chart(income_distribution: list, figure_name = "") -> None:
+        """
+        Plot the income distribution as a bar chart.
+
+        params:
+            income_distribution: list, list of income values and their probabilities
+        """
+        income_values = [x[0] for x in income_distribution]
+        income_probabilities = [x[1]*100 for x in income_distribution]
+
+        bin_width = (income_values[1] - income_values[0])*0.8
+
+        plt.bar(income_values, income_probabilities, width=bin_width, edgecolor="black", alpha = 0.7)
+        plt.xlabel("Annual Pretax Income in EUR")
+        plt.ylabel("Part of Population [%]")
+        plt.grid()
+        if figure_name != "":
+            plt.savefig(figure_name)
+        plt.show()
+    
+
 
 class TaxCalculator:
     # **Tax Brackets for 2025**
@@ -290,14 +351,22 @@ def create_plot_for_income_and_interest_rate(annual_income_cap: float = 500e3, s
 
     interest_rate_low_risk = 0.05
     
-    interest_rates = np.array([0.03, 0.07, 0.14, 0.2])
+    #interest_rates = np.array([0.03, 0.07, 0.14, 0.2])
+    interest_rates = np.array([0.07, 0.14])
     #annual_incomes = np.array([20e3,50e3,80e3,100e3,150e3,200e3,300e3])
     
     #income_distribution = [[10e3,0.1], [20e3,0.1], [30e3,0.1], [40e3,0.1], [50e3,0.1], [60e3,0.1], [70e3,0.1], [80e3,0.1], [90e3,0.1], [100e3,0.1]]
-    income_distribution = [[20e3,0.2], [50e3,0.3], [80e3,0.2], [100e3,0.1], [150e3,0.1], [200e3,0.05], [300e3,0.05]]
+    #income_distribution = [[20e3,0.2], [50e3,0.3], [80e3,0.2], [100e3,0.1], [150e3,0.1], [200e3,0.05], [300e3,0.05]]
 
-    total_probability = sum([x[1] for x in income_distribution])
-    assert round(total_probability,1)==1.0, "Income distribution does not sum up to 1, it is {:.3f}".format(total_probability)
+    #IncomeDistribution.plot_income_distribution_as_bar_chart(income_distribution, "toy_income_distribution.png")
+
+
+ 
+    #total_probability = sum([x[1] for x in income_distribution])
+    #assert round(total_probability,1)==1.0, "Income distribution does not sum up to 1, it is {:.3f}".format(total_probability)
+
+    income_distribution = IncomeDistribution.cutoff_income_distribution(IncomeDistribution.income_distribution_germany_annual_pretax_2025, 20e3)
+
 
     annual_incomes = [x[0] for x in income_distribution]
     
@@ -314,11 +383,12 @@ def create_plot_for_income_and_interest_rate(annual_income_cap: float = 500e3, s
 
     #print("I hang here")
     
+
     
     for interest_rate in interest_rates:
-        print("")
-        print("interest rate: " + str(interest_rate))
-        print("")
+        #print("")
+        #print("interest rate: " + str(interest_rate))
+        #print("")
         for annual_income, income_support in zip(annual_incomes, income_support_per_income_bracket):
 
             years, _ = calculate_number_of_years(interest_rate, interest_rate_low_risk, annual_income, annual_income_cap, income_support)
@@ -327,10 +397,12 @@ def create_plot_for_income_and_interest_rate(annual_income_cap: float = 500e3, s
             years_no_support, _ = calculate_number_of_years(interest_rate, interest_rate_low_risk, annual_income, annual_income_cap, 0)
             years_to_reach_capital_no_support.append(years_no_support)
 
-            print("annual income : " + str(annual_income) + " year reduction with support: " + str(years_no_support-years))
+            #print("annual income : " + str(annual_income) + " year reduction with support: " + str(years_no_support-years))
 
-        plt.plot(annual_incomes, np.array(years_to_reach_capital_no_support).copy(), marker="o")
-        plt.plot(annual_incomes, np.array(years_to_reach_capital).copy(), marker="x")
+        #line_temp, = plt.plot(annual_incomes, np.array(years_to_reach_capital_no_support).copy(), marker="o")
+
+        line_temp, = plt.plot(annual_incomes, np.array(years_to_reach_capital_no_support).copy(), marker="o", alpha=0.5, linestyle="-.")
+        plt.plot(annual_incomes, np.array(years_to_reach_capital).copy(), marker="x", color = line_temp.get_color())
 
         
         years_to_reach_capital = []
@@ -377,39 +449,55 @@ def calculate_income_support(income_distribution: list, annual_income_cap: float
 
     # Support according to income cap
 
+
+    total_percentage_below_income_cap = 0
+    
     for i in range(len(income_distribution)):
         annual_income, percentage = income_distribution[i]
-        if annual_income <= annual_income_cap:
+  
+
+        if annual_income < annual_income_cap:
             income_tax = TaxCalculator.calculate_german_income_tax(annual_income)
             income_tax_at_cap = TaxCalculator.calculate_german_income_tax(annual_income_cap)
 
             income_tax_deviation_from_cap = income_tax_at_cap - income_tax
             #income_tax_deviation_from_cap = annual_income * TaxCalculator.sg4 - income_tax
             accumulated_income_tax_under_cap += income_tax_deviation_from_cap * percentage
+            total_percentage_below_income_cap += percentage
 
-        if annual_income > annual_income_cap:
+        if annual_income >= annual_income_cap:
 
             
             income_tax = TaxCalculator.calculate_german_income_tax(annual_income)
             income_tax_at_cap = TaxCalculator.calculate_german_income_tax(annual_income_cap)
 
-            print(f"annual income: {annual_income}")
-            print(f"income tax: {income_tax}")
-            print("income tax at cap:" + str(income_tax_at_cap))
+            #print(f"annual income: {annual_income}")
+            #print(f"income tax: {income_tax}")
+            #print("income tax at cap:" + str(income_tax_at_cap))
 
             income_tax_deviation_from_cap = income_tax_at_cap - income_tax
             accumulated_income_tax_over_cap += income_tax_deviation_from_cap * percentage
 
             support_per_income_bracket[i] = income_tax_deviation_from_cap
 
-            print("support per income bracked: " +str(support_per_income_bracket[i]))
+            #print("support per income bracked: " +str(support_per_income_bracket[i]))
 
     #sys.exit()
 
     accumulated_support_difference = accumulated_income_tax_under_cap - np.abs(accumulated_income_tax_over_cap)
     
+
+    print("total percentage below income cap: " + str(total_percentage_below_income_cap))
+
+    #sys.exit()
+
     for i in range(len(income_distribution)):
         annual_income, percentage = income_distribution[i]
+
+        print(f"percentage: {percentage}")
+        percentage = percentage / total_percentage_below_income_cap
+
+        print(f"percentage post normalization: {percentage}")
         if annual_income <= annual_income_cap:
             support_per_income_bracket[i] = np.abs(accumulated_income_tax_over_cap) * percentage
 
@@ -427,10 +515,15 @@ def calculate_income_support(income_distribution: list, annual_income_cap: float
 
 
 if __name__ == "__main__":
-    print(IncomeDistribution.income_distribution_germany_monthly_net_2025)
-    IncomeDistribution.check_sum_probability()
+
+    #IncomeDistribution.plot_income_distribution_as_bar_chart(IncomeDistribution.income_distribution_germany_annual_pretax_2025, "german_annual_income_distribution_2025.png")
+
+    #sys.exit()
+
+    #print(IncomeDistribution.income_distribution_germany_monthly_net_2025)
+    #IncomeDistribution.check_sum_probability(IncomeDistribution.income_distribution_germany_annual_pretax_2025)
     
-    print(IncomeDistribution.transform_distrubtion_to_annual_income())
+    #print(IncomeDistribution.transform_distrubtion_to_annual_income())
     #income = 30e3
     #income_net = income - TaxCalculator.calculate_german_income_tax(income) - TaxCalculator.calculate_german_social_security_tax(income)
     #print(income_net/12*0.15)
@@ -438,9 +531,9 @@ if __name__ == "__main__":
 
     #sys.exit()
     
-    #annual_income_cap = 150e3
+    annual_income_cap = 100e3
 
-    #create_plot_for_income_and_interest_rate(annual_income_cap=annual_income_cap, save_plot_to_disk=False)
+    create_plot_for_income_and_interest_rate(annual_income_cap=annual_income_cap, save_plot_to_disk=True)
     #sys.exit()
     
     #income = 100e3
