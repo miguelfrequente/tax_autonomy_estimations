@@ -64,6 +64,53 @@ class IncomeDistribution:
                                                       [144386.51692871458, 0.007699141],
                                                       [149645.4868968022, 0.0165038]]
     
+    income_distribution_us_annual_pretax_2025 = [
+                                                [1250.0, 13240000.0],
+                                                [3749.5, 5285000.0],
+                                                [6249.5, 5411000.0],
+                                                [8749.5, 5490000.0],
+                                                [11249.5, 9765000.0],
+                                                [13749.5, 6906000.0],
+                                                [16249.5, 9029000.0],
+                                                [18749.5, 6320000.0],
+                                                [21249.5, 9624000.0],
+                                                [23749.5, 6241000.0],
+                                                [26249.5, 8413000.0],
+                                                [28749.5, 5158000.0],
+                                                [31249.5, 10380000.0],
+                                                [33749.5, 4575000.0],
+                                                [36249.5, 7769000.0],
+                                                [38749.5, 4304000.0],
+                                                [41249.5, 8576000.0],
+                                                [43749.5, 3214000.0],
+                                                [46249.5, 6357000.0],
+                                                [48749.5, 3875000.0],
+                                                [51249.5, 8743000.0],
+                                                [53749.5, 3185000.0],
+                                                [56249.5, 5339000.0],
+                                                [58749.5, 2513000.0],
+                                                [61249.5, 7021000.0],
+                                                [63749.5, 2284000.0],
+                                                [66249.5, 4088000.0],
+                                                [68749.5, 1974000.0],
+                                                [71249.5, 5002000.0],
+                                                [73749.5, 1706000.0],
+                                                [76249.5, 3715000.0],
+                                                [78749.5, 1795000.0],
+                                                [81249.5, 3899000.0],
+                                                [83749.5, 1502000.0],
+                                                [86249.5, 2552000.0],
+                                                [88749.5, 1218000.0],
+                                                [91249.5, 2660000.0],
+                                                [93749.5, 1068000.0],
+                                                [96249.5, 1914000.0],
+                                                [98749.5, 998000.0],
+                                                [125000.0, 19674000.0],
+                                                [175000.0, 7765000.0],
+                                                [225000.0, 3336000.0],
+                                                [250000.0, 5238000.0]
+                                            ]
+                                                
     def check_sum_probability(distribution: list) -> None:
         total_probability = sum([x[1] for x in distribution])
         print(total_probability)
@@ -341,7 +388,7 @@ def calculate_number_of_years(interest_rate_annual: float, interest_rate_low_ris
     return years, total_required_capital
 
 
-def create_plot_for_income_and_interest_rate(annual_income_cap: float = 500e3, save_plot_to_disk: bool = False) -> None:
+def create_plot_for_income_and_interest_rate(annual_income_cap: float = 500e3, number_of_citizens: float = 1, economy_subsidy:float = 0, save_plot_to_disk: bool = False) -> None:
     """
         Create a plot to show the number of years to reach a sufficient capital for different annual incomes and interest rates.
 
@@ -373,7 +420,7 @@ def create_plot_for_income_and_interest_rate(annual_income_cap: float = 500e3, s
     #annual_income_cap = 100e3
     years_to_reach_capital = []
     years_to_reach_capital_no_support = []
-    income_support_per_income_bracket,_ = calculate_income_support(income_distribution, annual_income_cap)
+    income_support_per_income_bracket,_ = calculate_income_support(income_distribution, annual_income_cap, number_of_citizens, economy_subsidy)
 
     print(annual_income_cap)
     print(income_distribution)
@@ -428,16 +475,20 @@ def create_plot_for_income_and_interest_rate(annual_income_cap: float = 500e3, s
     
     # save the plot in the current directory
     if save_plot_to_disk:
+
+
+
         if annual_income_cap > 300e3:
             plt.savefig("growthtime_estimations_nocap.png")
         else:
-            redestribution_tag = "_redistributed" if income_support > 0 else ""
-            plt.savefig("growthtime_estimations_cap_" + str(int(annual_income_cap/1e3)) + "k" + str(redestribution_tag)+".png")
+            tag = "_redistributed" if income_support > 0 else ""
+            tag = tag + "_subsidy_" + str(int(economy_subsidy/1e9)) + "b" if economy_subsidy > 0 else tag
+            plt.savefig("growthtime_estimations_cap_" + str(int(annual_income_cap/1e3)) + "k" + str(tag)+".png")
 
     plt.show()
 
 
-def calculate_income_support(income_distribution: list, annual_income_cap: float) -> float:
+def calculate_income_support(income_distribution: list, annual_income_cap: float, number_of_citizens: float = 1, economy_subsidy: float = 0) -> float:
 
     #income_distribution = [[10e3,0.1], [20e3,0.1], [30e3,0.1], [40e3,0.1], [50e3,0.1], [60e3,0.1], [70e3,0.1], [80e3,0.1], [90e3,0.1], [100e3,0.1]]
     support_per_income_bracket = np.zeros((len(income_distribution)))
@@ -491,6 +542,9 @@ def calculate_income_support(income_distribution: list, annual_income_cap: float
 
     #sys.exit()
 
+
+    number_of_citizens_below_income_cap = number_of_citizens * total_percentage_below_income_cap
+
     for i in range(len(income_distribution)):
         annual_income, percentage = income_distribution[i]
 
@@ -499,7 +553,7 @@ def calculate_income_support(income_distribution: list, annual_income_cap: float
 
         print(f"percentage post normalization: {percentage}")
         if annual_income <= annual_income_cap:
-            support_per_income_bracket[i] = np.abs(accumulated_income_tax_over_cap) * percentage
+            support_per_income_bracket[i] = (np.abs(accumulated_income_tax_over_cap)+economy_subsidy/number_of_citizens_below_income_cap) * percentage
 
 
 
@@ -532,8 +586,11 @@ if __name__ == "__main__":
     #sys.exit()
     
     annual_income_cap = 100e3
+    number_of_citizens = 83e6
+    economy_subsidy = 1000e9*0.3
 
-    create_plot_for_income_and_interest_rate(annual_income_cap=annual_income_cap, save_plot_to_disk=True)
+    create_plot_for_income_and_interest_rate(annual_income_cap=annual_income_cap, number_of_citizens=number_of_citizens, 
+                                             economy_subsidy=economy_subsidy, save_plot_to_disk=True)
     #sys.exit()
     
     #income = 100e3
