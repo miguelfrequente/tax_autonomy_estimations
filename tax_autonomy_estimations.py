@@ -132,7 +132,8 @@ class IncomeDistribution:
         """
 
         total_probability = sum([x[1] for x in distribution])
-        assert round(total_probability,1)==1.0, "Income distribution does not sum up to 1, it is {:.3f}".format(total_probability)
+        if round(total_probability,1)-1.0 > 1e-6:
+            raise Warning("Income distribution does not sum up to 1, it is {:.3f}".format(total_probability))
 
     def cutoff_income_distribution(income_distribution: list, cutoff: float) -> list:
         """
@@ -473,7 +474,6 @@ def create_plot_for_income_and_interest_rate(income_distribution: list, interest
     """     
 
 
-
     IncomeDistribution.check_sum_probability(income_distribution)
    
     income_support_per_income_bracket,_ = calculate_income_support(income_distribution, annual_income_cap, number_of_citizens, economy_subsidy)
@@ -537,18 +537,32 @@ def create_plot_for_income_and_interest_rate(income_distribution: list, interest
     plt.show()
 
 
-def calculate_income_support(income_distribution: list, annual_income_cap: float, number_of_citizens: float = 1, economy_subsidy: float = 0) -> float:
+def calculate_income_support(income_distribution: list, annual_income_cap: float, number_of_citizens: float = 1, economy_subsidy: float = 0) -> list:
+    """
+    This function calculates the income support for each income bracket below the annual income cap.
 
-    #income_distribution = [[10e3,0.1], [20e3,0.1], [30e3,0.1], [40e3,0.1], [50e3,0.1], [60e3,0.1], [70e3,0.1], [80e3,0.1], [90e3,0.1], [100e3,0.1]]
+    The support is based on two components:
+        1. Support from the redistribution of the total income tax difference above the income tax at the annual income cap.
+        In this case the annual support is distributed to the income brackets below the annual income cap according their occurence in the income distribution.
+        2. Support from the economy through profits of the companies in the country. It is only distributed to people below the annual income cap.
+        This support is distributed also according to the occurence of the income brackets in the income distribution.
+
+    params:
+        income_distribution: list, list of annual income values and their probabilities
+        annual_income_cap: float, annual income in EUR that would represent "the maximum income needed" even if the current annual income is higher.
+        number_of_citizens: float, number of citizens in the country - used to compute the additional income subsidy through profits of the companies in a country.
+        economy_subsidy: float, additional income subsidy through economic profits in EUR
+
+    returns:
+        support_per_income_bracket: list, list of income support for each income bracket below the annual income cap
+        accumulated_support_difference: float, accumulated income tax difference above the annual income cap
+    """
+
     support_per_income_bracket = np.zeros((len(income_distribution)))
-    #annual_income_cap = 50e3
+
 
     accumulated_income_tax_under_cap = 0
     accumulated_income_tax_over_cap = 0
-
-
-    # Support according to income cap
-
 
     total_percentage_below_income_cap = 0
     
@@ -561,7 +575,6 @@ def calculate_income_support(income_distribution: list, annual_income_cap: float
             income_tax_at_cap = TaxCalculator.calculate_german_income_tax(annual_income_cap)
 
             income_tax_deviation_from_cap = income_tax_at_cap - income_tax
-            #income_tax_deviation_from_cap = annual_income * TaxCalculator.sg4 - income_tax
             accumulated_income_tax_under_cap += income_tax_deviation_from_cap * percentage
             total_percentage_below_income_cap += percentage
 
@@ -571,77 +584,56 @@ def calculate_income_support(income_distribution: list, annual_income_cap: float
             income_tax = TaxCalculator.calculate_german_income_tax(annual_income)
             income_tax_at_cap = TaxCalculator.calculate_german_income_tax(annual_income_cap)
 
-            #print(f"annual income: {annual_income}")
-            #print(f"income tax: {income_tax}")
-            #print("income tax at cap:" + str(income_tax_at_cap))
+            logging.debug(f"Annual income: {annual_income}")
+            logging.debug(f"Income tax: {income_tax}")
+            logging.debug("Income tax at cap:" + str(income_tax_at_cap))
 
             income_tax_deviation_from_cap = income_tax_at_cap - income_tax
             accumulated_income_tax_over_cap += income_tax_deviation_from_cap * percentage
 
             support_per_income_bracket[i] = income_tax_deviation_from_cap
 
-            #print("support per income bracked: " +str(support_per_income_bracket[i]))
-
-    #sys.exit()
+            logging.debug("Support per income bracked: " +str(support_per_income_bracket[i]))
 
     accumulated_support_difference = accumulated_income_tax_under_cap - np.abs(accumulated_income_tax_over_cap)
     
-
-    print("total percentage below income cap: " + str(total_percentage_below_income_cap))
-
-    #sys.exit()
-
-
     number_of_citizens_below_income_cap = number_of_citizens * total_percentage_below_income_cap
+
+    logging.debug("total percentage below income cap: " + str(total_percentage_below_income_cap))
+
 
     for i in range(len(income_distribution)):
         annual_income, percentage = income_distribution[i]
-
-        print(f"percentage: {percentage}")
+        
+        logging.debug(f"percentage pre normalization: {percentage}")
+        
         percentage = percentage / total_percentage_below_income_cap
 
-        print(f"percentage post normalization: {percentage}")
+        logging.debug(f"percentage post normalization: {percentage}")
+        
         if annual_income <= annual_income_cap:
             support_per_income_bracket[i] = (np.abs(accumulated_income_tax_over_cap)+economy_subsidy/number_of_citizens_below_income_cap) * percentage
-
-
 
     return support_per_income_bracket, accumulated_support_difference
     
 
 
 
-    print(f"Accumulated income tax deviation under cap: {accumulated_income_tax_under_cap}")
-    print(f"Accumulated income tax deviation over cap: {accumulated_income_tax_over_cap}")
-
 
 
 
 if __name__ == "__main__":
 
-    logging.basicConfig(level=logging.DEBUG, format='%(funcName)s:  %(message)s')
-    #IncomeDistribution.plot_income_distribution_as_bar_chart(IncomeDistribution.income_distribution_germany_annual_pretax_2025, "german_annual_income_distribution_2025.png")
+    logging.basicConfig(level=logging.INFO, format='%(funcName)s:  %(message)s')
 
-    #sys.exit()
-
-    #print(IncomeDistribution.income_distribution_germany_monthly_net_2025)
-    #IncomeDistribution.check_sum_probability(IncomeDistribution.income_distribution_germany_annual_pretax_2025)
-    
-    print(IncomeDistribution.transform_distrubtion_to_annual_income())
-    #income = 30e3
-    #income_net = income - TaxCalculator.calculate_german_income_tax(income) - TaxCalculator.calculate_german_social_security_tax(income)
-    #print(income_net/12*0.15)
-    #print(income_net/12)
-
-    sys.exit()
     
     annual_income_cap = 100e3
     number_of_citizens = 83e6
-    economy_subsidy = 1000e9*0.3
+    economy_subsidy = 1000e9
 
     interest_rate_low_risk = 0.05
     
-    #interest_rates = np.array([0.03, 0.07, 0.14, 0.2])
+
     interest_rates = np.array([0.07, 0.14])
 
 
@@ -656,21 +648,4 @@ if __name__ == "__main__":
     
 
     #IncomeDistribution.plot_income_distribution_as_bar_chart(income_distribution, "toy_income_distribution.png")
-
-    #sys.exit()
     
-    #income = 100e3
-    #net_income = income - TaxCalculator.calculate_german_income_tax(income) - TaxCalculator.calculate_german_social_security_tax(income)
-    #print(net_income/12)
-    
-    #sys.exit()
-    
-    #interest_rate = 0.15
-    #interest_rate_low_risk = 0.05
-    #annual_income = 100e3
-    #annual_income_cap = 300e3
-
-    #years, total_required_capital = calculate_number_of_years(interest_rate, interest_rate_low_risk, annual_income, annual_income_cap)
-    #print(f"Years to reach capital growth: {years}")    
-    #print(total_required_capital)
-
